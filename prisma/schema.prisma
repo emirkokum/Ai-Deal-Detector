@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Game {
+  id        String   @id @default(uuid())
+  name      String  
+  platform  String   
+  prices    Price[] 
+  deals     Deal[]  
+  createdAt DateTime @default(now())
+}
+
+model Price {
+  id         String   @id @default(uuid())
+  amount     Float    
+  currency   String   @default("USD") 
+  source     String   
+  gameId     String     
+  game       Game     @relation(fields: [gameId], references: [id])
+  createdAt  DateTime @default(now()) 
+}
+
+model Deal {
+  id           String   @id @default(uuid())
+  oldPrice     Float    
+  newPrice     Float    
+  currency     String   @default("USD")
+  discountPct  Float    
+  dealScore    Int      
+  isHistoricalLow Boolean @default(false) 
+  gameId       String     
+  game         Game     @relation(fields: [gameId], references: [id])
+  createdAt    DateTime @default(now()) 
+}

@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:17-alpine # Daha hafif ve güncel sürüm
+    container_name: deal-detector-db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: deal_detector
+    ports:
+      - '5432:5432'

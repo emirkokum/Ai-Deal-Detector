@@ -1,0 +1,9 @@
+POST http://localhost:3000/prices/append
+Content-Type: application/json
+
+{
+    "gameId": "50060def-0796-4e91-845a-1bedc4012aec",
+    "amount": 19.99,
+    "currency": "USD",
+    "source": "Steam"
+}
