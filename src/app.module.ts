@@ -4,12 +4,16 @@ import { AppService } from './app.service';
 import { PricesModule } from './prices/prices.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+import { HttpModule } from '@nestjs/axios';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     PrismaModule,
     PricesModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
+    HttpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

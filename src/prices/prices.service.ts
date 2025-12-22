@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppendPriceDto } from './dto/append-price.dto';
-import type { Price } from '../../generated/prisma/client.js';
+import type { Price } from '../../generated/prisma/client';
 
 @Injectable()
 export class PricesService {
