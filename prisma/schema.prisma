@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../../generated/prisma/client"
 }
 
 datasource db {
@@ -9,32 +8,34 @@ datasource db {
 
 model Game {
   id        String   @id @default(uuid())
-  name      String  
-  platform  String   
-  prices    Price[] 
-  deals     Deal[]  
+  name      String
+  platform  String
+  prices    Price[]
+  deals     Deal?    // Bir oyunun bir tane güncel deal analizi olur (One-to-One)
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Price {
-  id         String   @id @default(uuid())
-  amount     Float    
-  currency   String   @default("USD") 
-  source     String   
-  gameId     String     
-  game       Game     @relation(fields: [gameId], references: [id])
-  createdAt  DateTime @default(now()) 
+  id        String   @id @default(uuid())
+  amount    Float
+  currency  String   @default("USD")
+  source    String
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Deal {
-  id           String   @id @default(uuid())
-  oldPrice     Float    
-  newPrice     Float    
-  currency     String   @default("USD")
-  discountPct  Float    
-  dealScore    Int      
-  isHistoricalLow Boolean @default(false) 
-  gameId       String     
-  game         Game     @relation(fields: [gameId], references: [id])
-  createdAt    DateTime @default(now()) 
+  id              String   @id @default(uuid())
+  oldPrice        Float
+  newPrice        Float
+  currency        String   @default("USD")
+  dealScore       Int
+  aiAnalysis      String?  // AI'nın yaptığı açıklama buraya gelecek
+  gameId          String   @unique // Hatanın ana çözümü burası (Upsert için gerekli)
+  game            Game     @relation(fields: [gameId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 }
