@@ -7,13 +7,15 @@ datasource db {
 }
 
 model Game {
-  id        String   @id @default(uuid())
-  name      String
-  platform  String
-  prices    Price[]
-  deals     Deal?    // Bir oyunun bir tane güncel deal analizi olur (One-to-One)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  platform   String   @default("steam")
+  externalId String?  @unique // Steam AppID'sini burada tutacağız (Örn: "304390")
+  imageUrl   String?  // Eğer scraper resim URL'ini bulursa buraya yazarız
+  prices     Price[]
+  deals      Deal?    
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 }
 
 model Price {
