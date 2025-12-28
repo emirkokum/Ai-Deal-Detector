@@ -1,5 +1,6 @@
 import React from "react";
-import { Search, Flame, Filter } from "lucide-react";
+import { Search, Flame, Filter, Bell } from "lucide-react";
+import Link from "next/link";
 
 interface HeaderProps {
   onSearch: (term: string) => void;
@@ -61,6 +62,15 @@ const Header: React.FC<HeaderProps> = ({ onSearch, onFilter }) => {
             <Filter className="w-4 h-4" />
             Yüksek Skorlar
           </button>
+
+          {/* Notification Settings Button */}
+          <Link
+            href="/notify"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all border bg-slate-900 border-slate-800 text-slate-400 hover:border-indigo-500 hover:text-indigo-400"
+          >
+            <Bell className="w-4 h-4" />
+            Bildirimler
+          </Link>
         </div>
       </div>
     </header>

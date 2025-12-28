@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AIService } from './ai.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 @Injectable()
@@ -10,6 +11,7 @@ export class PricesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiService: AIService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   async savePrice(data: {
@@ -111,6 +113,30 @@ export class PricesService {
         });
         
         this.logger.log(`Deal Analizi Tamamlandı: ${item.gameName} (Skor: ${result.score})`);
+
+        // 🚀 EFSANE FIRSAT BİLDİRİMİ (Skor >= 90)
+        if (result.score >= 90) {
+          const game = await this.prisma.game.findUnique({ where: { id: item.gameId } });
+          const discountRate = Math.round(((item.avgPrice - item.currentPrice) / item.avgPrice) * 100);
+          
+          const steamImageUrl = game?.externalId
+            ? `https://cdn.akamai.steamstatic.com/steam/apps/${game.externalId}/header.jpg`
+            : undefined;
+          
+          const steamLink = game?.externalId
+            ? `https://store.steampowered.com/app/${game.externalId}`
+            : `https://store.steampowered.com/search/?term=${encodeURIComponent(item.gameName)}`;
+
+          await this.telegramService.sendDealNotification({
+            gameName: item.gameName,
+            newPrice: item.currentPrice,
+            oldPrice: item.avgPrice,
+            discountRate,
+            aiAnalysis: result.reasoning,
+            steamLink,
+            imageUrl: steamImageUrl,
+          });
+        }
       }
     } catch (error) {
       this.logger.error('Toplu analiz hatası, varsayılan değerler atanıyor:', error.message);

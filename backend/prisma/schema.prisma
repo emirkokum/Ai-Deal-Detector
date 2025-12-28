@@ -41,3 +41,11 @@ model Deal {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
 }
+
+model Subscription {
+  id        String   @id @default(uuid())
+  chatId    String   @unique // Telegram Chat ID - her kullanıcı tek subscription'a sahip
+  gameIds   String[] // Favori oyun ID'leri
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}

@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import { ExternalLink, BrainCircuit, Star, Heart } from "lucide-react";
 import { GameDeal } from "../types";
+import { useFavorites } from "../context/FavoritesContext";
 
 interface GameCardProps {
   deal: GameDeal;
 }
 
 const GameCard: React.FC<GameCardProps> = ({ deal }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorited = isFavorite(deal.id);
   const isHighScore = deal.score >= 90;
   const isMidScore = deal.score >= 80 && deal.score < 90;
 
@@ -37,15 +39,15 @@ const GameCard: React.FC<GameCardProps> = ({ deal }) => {
           <button
             onClick={(e) => {
               e.preventDefault();
-              setIsFavorite(!isFavorite);
+              toggleFavorite(deal.id);
             }}
             className={`p-2 rounded-lg backdrop-blur-md border transition-all duration-300 ${
-              isFavorite
+              favorited
                 ? "bg-red-500/20 border-red-500/50 text-red-500 scale-110 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
                 : "bg-slate-900/40 border-white/10 text-white/70 hover:text-white hover:bg-slate-900/60"
             }`}
           >
-            <Heart className={`w-4 h-4 ${isFavorite ? "fill-red-500" : ""}`} />
+            <Heart className={`w-4 h-4 ${favorited ? "fill-red-500" : ""}`} />
           </button>
 
           {/* Score Badge */}
