@@ -1,0 +1,17 @@
+name: AI Deal Detector Daily Scan
+
+on:
+  schedule:
+    - cron: '0 6,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Trigger Request to Backend
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/prices/trigger" \
+          -H "Content-Type: application/json" \
+          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"
