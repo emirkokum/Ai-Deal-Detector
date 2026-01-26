@@ -36,7 +36,18 @@ public class PricesService(
 
         try
         {
-            var response = await httpClient.GetStringAsync(CheapSharkApiUrl, cancellationToken);
+            logger.LogInformation("Fetching deals from CheapShark API...");
+            string response;
+            try
+            {
+                response = await httpClient.GetStringAsync(CheapSharkApiUrl, cancellationToken);
+                logger.LogInformation("CheapShark API response received: {Length} bytes", response.Length);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to fetch from CheapShark API. Exception type: {Type}", ex.GetType().Name);
+                throw;
+            }
             var deals = JsonSerializer.Deserialize<List<CheapSharkDeal>>(response, JsonOptions);
 
             if (deals is not { Count: > 0 })
@@ -93,9 +104,10 @@ public class PricesService(
             logger.LogInformation("{Message}", result.Message);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            logger.LogWarning("Deal processing was cancelled");
+            logger.LogWarning(ex, "Deal processing was cancelled. CancellationToken requested: {Requested}, Exception type: {Type}",
+                cancellationToken.IsCancellationRequested, ex.GetType().Name);
             return new ProcessResult { Success = false, Message = "Processing cancelled" };
         }
         catch (Exception ex)

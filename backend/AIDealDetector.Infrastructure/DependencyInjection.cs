@@ -26,15 +26,57 @@ public static class DependencyInjection
             }));
 
         // Register HttpClient with retry policies for external API services
+        // Force IPv4 to avoid Docker IPv6 connectivity issues on macOS
         services.AddHttpClient<IAIService, AIService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = TimeSpan.FromMinutes(2);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+            ConnectCallback = async (context, cancellationToken) =>
+            {
+                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork,
+                    System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+                socket.NoDelay = true;
+                try
+                {
+                    await socket.ConnectAsync(context.DnsEndPoint.Host, context.DnsEndPoint.Port, cancellationToken);
+                    return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            }
         });
 
         services.AddHttpClient<IPricesService, PricesService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromMinutes(2);
             client.DefaultRequestHeaders.Add("User-Agent", "AIDealDetector/1.0");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+            ConnectCallback = async (context, cancellationToken) =>
+            {
+                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork,
+                    System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+                socket.NoDelay = true;
+                try
+                {
+                    await socket.ConnectAsync(context.DnsEndPoint.Host, context.DnsEndPoint.Port, cancellationToken);
+                    return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            }
         });
 
         // Register scoped services

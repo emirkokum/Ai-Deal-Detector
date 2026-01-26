@@ -1,8 +1,10 @@
+# =========================
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+# =========================
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy solution and project files first (for layer caching)
+# Copy solution and project files first (layer caching)
 COPY AIDealDetector.sln .
 COPY AIDealDetector.Api/AIDealDetector.Api.csproj AIDealDetector.Api/
 COPY AIDealDetector.Core/AIDealDetector.Core.csproj AIDealDetector.Core/
@@ -11,48 +13,34 @@ COPY AIDealDetector.Infrastructure/AIDealDetector.Infrastructure.csproj AIDealDe
 # Restore dependencies
 RUN dotnet restore
 
-# Copy all source code
+# Copy remaining source code
 COPY . .
 
-# Build and publish in Release mode
+# Publish
 RUN dotnet publish AIDealDetector.Api/AIDealDetector.Api.csproj \
     -c Release \
     -o /app/publish \
     --no-restore \
     /p:UseAppHost=false
 
+# =========================
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+# =========================
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Install curl for health checks (Alpine uses apk)
-RUN apk add --no-cache curl
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -D appuser
-
-# Copy published files
+# Copy published output
 COPY --from=build /app/publish .
 
-# Set ownership
-RUN chown -R appuser:appgroup /app
-
-# Switch to non-root user
-USER appuser
-
-# Expose port
 EXPOSE 8080
 
-# Set environment variables
 ENV ASPNETCORE_URLS=http://+:8080 \
-    ASPNETCORE_ENVIRONMENT=Production \
-    DOTNET_RUNNING_IN_CONTAINER=true \
-    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+    DOTNET_RUNNING_IN_CONTAINER=true
 
-# Health check using curl
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Entry point
 ENTRYPOINT ["dotnet", "AIDealDetector.Api.dll"]

@@ -5,41 +5,39 @@ using AIDealDetector.Infrastructure.Data;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add infrastructure services (EF Core + all services)
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Get connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+Console.WriteLine($"[BOOT] ConnectionString loaded: {!string.IsNullOrWhiteSpace(connectionString)}");
+
 // Add Hangfire for background jobs
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-var hangfireEnabled = false;
-
-try
+#pragma warning disable CS0618 // Type or member is obsolete
+builder.Services.AddHangfire(config =>
 {
-    using var testConnection = new NpgsqlConnection(connectionString);
-    await testConnection.OpenAsync();
-    await testConnection.CloseAsync();
-
-    builder.Services.AddHangfire(config => config
+    config
         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+        .UsePostgreSqlStorage(connectionString, new PostgreSqlStorageOptions
+        {
+            SchemaName = "hangfire",
+            PrepareSchemaIfNecessary = true
+        });
+});
+#pragma warning restore CS0618
 
-    builder.Services.AddHangfireServer(options =>
-    {
-        options.WorkerCount = Environment.ProcessorCount;
-        options.Queues = ["default", "critical"];
-    });
-
-    hangfireEnabled = true;
-}
-catch (Exception ex)
+builder.Services.AddHangfireServer(options =>
 {
-    Console.WriteLine($"Warning: Could not initialize Hangfire - background jobs disabled. Error: {ex.Message}");
-}
+    options.WorkerCount = Environment.ProcessorCount;
+    options.Queues = ["default", "critical"];
+});
 
 // Add controllers with JSON options
 builder.Services.AddControllers()
@@ -50,15 +48,7 @@ builder.Services.AddControllers()
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "AI Deal Detector API",
-        Version = "v1",
-        Description = "Scrapes game prices, analyzes deals with AI, and sends notifications"
-    });
-});
+builder.Services.AddSwaggerGen();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -72,10 +62,18 @@ builder.Services.AddCors(options =>
 });
 
 // Add health checks
-builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString ?? throw new InvalidOperationException("Connection string required"));
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Run database migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Console.WriteLine("[BOOT] Running database migrations...");
+    dbContext.Database.Migrate();
+    Console.WriteLine("[BOOT] Database migrations completed successfully.");
+}
 
 // Configure the HTTP request pipeline
 app.UseSwagger();
@@ -84,11 +82,6 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "AI Deal Detector API v1");
     options.RoutePrefix = "swagger";
 });
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
 
 app.UseGlobalExceptionMiddleware();
 app.UseCors();
@@ -99,46 +92,28 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
-// Configure Hangfire dashboard only if enabled
-if (hangfireEnabled)
+// Configure Hangfire dashboard
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
-    app.UseHangfireDashboard("/hangfire", new DashboardOptions
-    {
-        DashboardTitle = "AI Deal Detector Jobs"
-    });
+    DashboardTitle = "AI Deal Detector Jobs"
+});
 
-    app.Lifetime.ApplicationStarted.Register(() =>
-    {
-        try
-        {
-            RecurringJob.AddOrUpdate<IScraperService>(
-                "daily-deal-scraper",
-                service => service.TriggerDailyScrapingAsync(),
-                "0 7 * * *",
-                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
-
-            Console.WriteLine("Hangfire recurring job registered: daily-deal-scraper at 07:00 UTC");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Warning: Could not register Hangfire job. Error: {ex.Message}");
-        }
-    });
-}
-
-// Ensure database is migrated
-await using (var scope = app.Services.CreateAsyncScope())
+app.Lifetime.ApplicationStarted.Register(() =>
 {
     try
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await dbContext.Database.MigrateAsync();
-        Console.WriteLine("Database migration completed successfully");
+        RecurringJob.AddOrUpdate<IScraperService>(
+            "daily-deal-scraper",
+            service => service.TriggerDailyScrapingAsync(),
+            "0 7 * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+        Console.WriteLine("[BOOT] Hangfire recurring job registered: daily-deal-scraper at 07:00 UTC");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Warning: Database migration failed. Error: {ex.Message}");
+        Console.WriteLine($"[BOOT] Warning: Could not register Hangfire job. Error: {ex.Message}");
     }
-}
+});
 
-await app.RunAsync();
+app.Run();

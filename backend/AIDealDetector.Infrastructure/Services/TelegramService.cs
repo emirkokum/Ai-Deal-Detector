@@ -139,11 +139,11 @@ public sealed class TelegramService : ITelegramService
 
             *{EscapeMarkdown(notification.GameName)}*
 
-            {EscapeMarkdown(notification.OldPrice.ToString("F2"))} {EscapeMarkdown(notification.Currency)} \-> *{EscapeMarkdown(notification.NewPrice.ToString("F2"))} {EscapeMarkdown(notification.Currency)}*
-            Indirim: *%{notification.DiscountPercent}*
+            {EscapeMarkdown(notification.OldPrice.ToString("F2"))} {EscapeMarkdown(notification.Currency)} ➜ *{EscapeMarkdown(notification.NewPrice.ToString("F2"))} {EscapeMarkdown(notification.Currency)}*
+            İndirim: *%{notification.DiscountPercent}*
             Puan: *{notification.DealScore}/100*
 
-            _{EscapeMarkdown(notification.AiAnalysis ?? "AI analizi mevcut degil")}_
+            _{EscapeMarkdown(notification.AiAnalysis ?? "AI analizi mevcut değil")}_
             """;
 
         if (!string.IsNullOrEmpty(notification.StoreUrl))
